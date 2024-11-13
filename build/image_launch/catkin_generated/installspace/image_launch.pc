@@ -1,8 +1,0 @@
-prefix=/home/rosdemo/cv_ws/install
-
-Name: image_launch
-Description: Description of image_launch
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

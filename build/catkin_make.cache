@@ -1,2 +1,0 @@
-Yolov8_ros/yolov8_ros:Yolov8_ros/yolov8_ros_msgs:camera_split
--DCATKIN_DEVEL_PREFIX=/home/rosdemo/cv_ws/devel -DCMAKE_INSTALL_PREFIX=/home/rosdemo/cv_ws/install -G Unix Makefiles

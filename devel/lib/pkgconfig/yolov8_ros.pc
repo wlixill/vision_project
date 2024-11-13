@@ -1,8 +1,0 @@
-prefix=/home/rosdemo/cv_ws/devel
-
-Name: yolov8_ros
-Description: Description of yolov8_ros
-Version: 1.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 
