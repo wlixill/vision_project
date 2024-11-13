@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/rosdemo/cv_ws/install/setup.sh

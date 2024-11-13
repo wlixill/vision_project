@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+
+  <!-- Load Parameter -->
+  
+
+  <!-- Start yolov5 and ros wrapper -->
+  <node pkg="yolov8_ros" type="yolo_stero.py" name="yolo_stero" output="screen" >
+    <!-- 待修改 -->
+    <param name="left_detection_image_topic"       value="/left/yolov8/detection_image" />
+    <param name="right_detection_image_topic"       value="/right/yolov8/detection_image" />
+    <!-- 待修改 -->
+    <param name="left_BoundingBoxes_topic"         value="/left/yolov8/BoundingBoxes" />
+    <param name="right_BoundingBoxes_topic"         value="/right/yolov8/BoundingBoxes" />
+    <!-- 待修改 -->
+    <!-- <param name="camera_frame"       value="camera_color_frame"/> -->
+    <!-- <param name="visualize"       value="true"/> -->
+    <!-- <param name="conf"              value="0.3" /> -->
+  </node>
+
+</launch>

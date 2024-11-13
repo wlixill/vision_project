@@ -1,0 +1,8 @@
+prefix=/home/rosdemo/cv_ws/devel
+
+Name: camera_split
+Description: Description of camera_split
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
