@@ -12,6 +12,23 @@ from sensor_msgs.msg import Image
 from yolov8_ros_msgs.msg import BoundingBox, BoundingBoxes
 from message_filters import ApproximateTimeSynchronizer, Subscriber,  TimeSynchronizer
 
+# 内参左
+k1 = np.array([[393.68907, 0., 313.53511],
+           [0., 393.4709, 233.51092],
+           [0., 0., 1.]])
+# 内参右
+k2 = np.array([[404.42035,   0.     , 329.88402],
+           [0.     , 403.05103, 243.74163],
+           [0.     ,   0.     ,   1.     ]])
+# 畸变左
+q1 = np.array([-0.010823, 0.018389, -0.000536, 0.001479, 0.000000])
+# 畸变右
+q2 = np.array([-0.018300, 0.033513, -0.000475, 0.006185, 0.000000])
+# 旋转矩阵总和
+R = np.array([[ 0.99990691, -0.00480303, -0.01277094],
+          [0.00478708,  0.99998772, -0.00127927],
+          [0.01277693,  0.00121802,  0.99991763]])
+T = np.array([-0.537, 0, 0])
 
 left_detection_image_topic = rospy.get_param(
 '~left_detection_image_topic', '/left/yolov8/detection_image')
@@ -30,7 +47,22 @@ right_BoundingBoxes_topic = rospy.get_param(
 #  根据检测到的识别框，剪裁roi，然后放入StereoBM算出视差dis
 #  最后根据公式z = f*b算出距离z
 
-stereo = cv2.StereoBM_create(numDisparities=16, blockSize=15)
+# stereo = cv2.StereoBM_create(numDisparities=16, blockSize=15)
+R1, R2, P1, P2, Q, roi1, roi2 = cv2.stereoRectify(k1, q1, k2, q2, (640, 480), R, T)
+left_map1, left_map2 = cv2.initUndistortRectifyMap(k1, q1, R1, P1, (640, 480), cv2.CV_16SC2)
+right_map1, right_map2 = cv2.initUndistortRectifyMap(k2, q2, R2, P2, (640, 480), cv2.CV_16SC2)
+
+stereo = cv2.StereoSGBM_create(
+    minDisparity=0,
+    numDisparities=64,  # 视差范围
+    blockSize=21,       # 匹配块大小
+    P1=8 * 3 * 15**2,
+    P2=32 * 3 * 15**2,
+    disp12MaxDiff=1,
+    uniquenessRatio=20,
+    speckleWindowSize=150,
+    speckleRange=32
+)
 # bridge = CvBridge()
 
 # f =  焦距 x 分辨率 / 传感器宽度
@@ -38,7 +70,7 @@ stereo = cv2.StereoBM_create(numDisparities=16, blockSize=15)
 # 分辨率单个为640像素
 # 传感器宽度 12mm
 
-f = 187 # 像素单位
+f = 200 # 像素单位
 b = 0.12 # 基线即两个相机之间的距离单位:m
 def imgmsg_to_cv2(img_msg):
     if img_msg.encoding != "bgr8":
@@ -78,9 +110,17 @@ def callback(left_img_msg, bounding_boxes_msg):
                     rospy.loginfo("开始计算")
                     left_cropped = process_left_image[left_box.ymin:left_box.ymax, left_box.xmin:left_box.xmax]
                     right_cropped = process_right_image[right_box.ymin:right_box.ymax, right_box.xmin:right_box.xmax]
+                    left_cropped = cv2.GaussianBlur(left_cropped, (5, 5), 0)
+                    right_cropped = cv2.GaussianBlur(right_cropped, (5, 5), 0)
                     if left_cropped.shape != right_cropped.shape:
                         right_cropped = cv2.resize(right_cropped, (left_cropped.shape[1], left_cropped.shape[0]))
-                    disparity_map = stereo.compute(cv2.cvtColor(left_cropped, cv2.COLOR_BGR2GRAY), cv2.cvtColor(right_cropped, cv2.COLOR_BGR2GRAY))
+
+                    left_rectified = cv2.remap(left_cropped, left_map1, left_map2, cv2.INTER_LINEAR)
+                    right_rectified = cv2.remap(right_cropped, right_map1, right_map2, cv2.INTER_LINEAR)
+
+                    disparity_map = stereo.compute(cv2.cvtColor(left_rectified, cv2.COLOR_BGR2GRAY), cv2.cvtColor(right_rectified, cv2.COLOR_BGR2GRAY))
+                    # 视差值的归一化处理以便可视化
+                    disp_normalized = cv2.normalize(disparity_map, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
                      # 计算目标的平均视差，去除无效的视差值
                     valid_disparity = np.mean(disparity_map[disparity_map > 0])
                     if valid_disparity.size > 0:
@@ -90,13 +130,12 @@ def callback(left_img_msg, bounding_boxes_msg):
                             rospy.loginfo(f"目标类别:{detector_name_left}, 距离:{z:.2f}米")
                             label_text = f"{detector_name_left}:{z:2f}m"
 
-
-                            
-                            cv2.putText(process_left_image, label_text, (left_box.xmin, left_box.ymin ), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-                            cv2.putText(process_right_image, label_text, (left_box.xmin, left_box.ymin ), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-
-            cv2.imshow("process_left_image", process_left_image)
-            cv2.imshow("process_right_image", process_right_image)
+                            # cv2.putText(process_left_image, label_text, (left_box.xmin, left_box.ymin ), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                            # cv2.putText(process_right_image, label_text, (left_box.xmin, left_box.ymin ), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                     # 显示视差图
+                    cv2.imshow("Disparity Map", disp_normalized)
+            # cv2.imshow("process_left_image", process_left_image)
+            # cv2.imshow("process_right_image", process_right_image)
             cv2.waitKey(1)
         
 

@@ -8,7 +8,8 @@
 
   <!-- Start yolov5 and ros wrapper -->
   <node pkg="yolov8_ros" type="yolo_v8_left.py" name="yolov8_ros_left" output="screen" >
-    <param name="weight_path"       value="$(find yolov8_ros)/weights/last.pt"/>
+    <param name="weight_path"       value="$(find yolov8_ros)/weights/last_001.pt"/>
+    <!-- <param name="weight_path"       value="$(find yolov8_ros)/weights/last.pt"/> -->
     <!-- 待修改 -->
     <param name="left_image_topic"       value="/left_cam/image_raw" />
     <!-- <param name="right_image_topic"       value="/right_cam/image_raw" /> -->

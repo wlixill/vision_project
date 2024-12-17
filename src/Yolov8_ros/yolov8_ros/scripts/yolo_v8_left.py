@@ -67,9 +67,8 @@ class Yolo_Dect:
             image.height, image.width, -1)
 
         self.color_image = cv2.cvtColor(self.color_image, cv2.COLOR_BGR2RGB)
-
-        results = self.model(self.color_image, show=False, conf=0.3)
-
+        results = self.model(self.color_image, show=False, conf=0.3, task="segment")
+        # results = self.model(self.color_image, show=False, conf=0.3)
         self.dectshow(results, image.height, image.width)
 
         cv2.waitKey(3)
@@ -90,6 +89,29 @@ class Yolo_Dect:
             boundingBox.Class = results[0].names[result.cls.item()]
             boundingBox.probability = result.conf.item()
             self.boundingBoxes.bounding_boxes.append(boundingBox)
+# 可视化mask
+        # if results[0].masks is not None and results[0].masks.data is not None:
+        #     print("分割掩码存在，开始处理...")
+        #     # 获取原始图像
+        #     orig_img = results[0].orig_img
+        #     # 遍历每个掩码
+        #     for mask in results[0].masks.data:
+        #         # 将掩码张量转换为 NumPy 数组
+        #         mask_np = mask.cpu().numpy().astype(np.uint8) * 255
+        #         # 应用颜色映射
+        #         colored_mask = cv2.applyColorMap(mask_np, cv2.COLORMAP_JET)
+        #         self.frame = cv2.addWeighted(self.frame, 1, mask_np, 0.2, 0)
+        #         print("叠加操作成功！")
+        # else:
+        #     rospy.logerr("未找到分割掩码。请检查模型是否支持分割任务。")
+        # # if results[0].masks is not None:
+        #         print("分割掩码存在，准备处理掩码数据...")
+        #         # 查看掩码数据的具体类型和属性
+        #         print(type(results[0].masks))
+        #         print(dir(results[0].masks))
+        # else:
+        #     print("分割掩码为空，请检查模型是否正确加载分割任务。")
+
         self.position_pub.publish(self.boundingBoxes)
         self.publish_image(self.frame, height, width)
 
